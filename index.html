@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI School Scheduler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f3f4f6; }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 { font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; color: #1f2937; }
+        .markdown-body h3 { font-size: 1.125rem; }
+        .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .markdown-body p { margin-bottom: 0.75rem; }
+        .markdown-body strong { font-weight: 600; color: #111827; }
+        .loader { border-top-color: #3b82f6; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="antialiased text-gray-800">
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="bg-blue-600 p-2 rounded-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-900">Trợ Lý AI Xếp Lịch</h1>
+                    <p class="text-xs text-gray-500">Giải pháp đăng ký tín chỉ thông minh</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h2 class="text-lg font-semibold mb-4">Nhập dữ liệu đầu vào</h2>
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">📚 Danh sách môn học & thời gian</label>
+                        <textarea id="coursesInput" rows="6" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm">- Môn 1: Cấu trúc dữ liệu (Sáng Thứ 2 hoặc Chiều Thứ 3)&#10;- Môn 2: Trí tuệ nhân tạo (Sáng Thứ 4 hoặc Chiều Thứ 5)</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">🎯 Nguyện vọng của bạn</label>
+                        <textarea id="constraintsInput" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm">Tôi không muốn học sáng thứ 2.</textarea>
+                    </div>
+                    <button id="generateBtn" onclick="handleGenerate()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl transition-colors">
+                        Sắp xếp lịch học ngay
+                    </button>
+                    <div id="errorMessage" class="hidden p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-200"></div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full min-h-[500px]">
+                <h2 class="text-lg font-semibold mb-4">Kết quả từ AI</h2>
+                <div id="resultContainer" class="flex-1 bg-gray-50 rounded-xl p-6 border border-gray-100 overflow-y-auto">
+                    <div id="emptyState" class="h-full flex flex-col items-center justify-center text-gray-400 text-center">
+                        <p>Nhập thông tin bên trái và nhấn nút.</p>
+                    </div>
+                    <div id="loadingState" class="hidden h-full flex flex-col items-center justify-center text-blue-600">
+                        <div class="loader rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+                        <p class="font-medium animate-pulse">AI đang tính toán...</p>
+                    </div>
+                    <div id="resultContent" class="hidden markdown-body text-sm leading-relaxed"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Gọi thẳng vào máy chủ Backend Node.js của bạn
+        const apiUrl = 'http://localhost:3000/api/generate-schedule';
+
+        const btnGenerate = document.getElementById('generateBtn');
+        const coursesInput = document.getElementById('coursesInput');
+        const constraintsInput = document.getElementById('constraintsInput');
+        const errorMessage = document.getElementById('errorMessage');
+        const emptyState = document.getElementById('emptyState');
+        const loadingState = document.getElementById('loadingState');
+        const resultContent = document.getElementById('resultContent');
+        const resultContainer = document.getElementById('resultContainer');
+
+        async function handleGenerate() {
+            const courses = coursesInput.value.trim();
+            const constraints = constraintsInput.value.trim();
+
+            if (!courses || !constraints) return;
+
+            // Reset UI
+            errorMessage.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            resultContent.classList.add('hidden');
+            loadingState.classList.remove('hidden');
+            btnGenerate.disabled = true;
+            btnGenerate.classList.add('opacity-75');
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ courses, constraints }) 
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Lỗi kết nối đến máy chủ.');
+                }
+
+                let text = data.result; 
+                
+                if (!text) {
+                    throw new Error("Không có kết quả trả về từ AI.");
+                }
+
+                // Format Markdown ra HTML
+                text = text.replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                           .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                           .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                           .replace(/\n/gim, '<br>');
+                
+                resultContent.innerHTML = text;
+                loadingState.classList.add('hidden');
+                resultContent.classList.remove('hidden');
+                resultContainer.classList.remove('bg-gray-50');
+                resultContainer.classList.add('bg-white');
+
+            } catch (error) {
+                console.error(error);
+                errorMessage.textContent = error.message;
+                errorMessage.classList.remove('hidden');
+                loadingState.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            } finally {
+                btnGenerate.disabled = false;
+                btnGenerate.classList.remove('opacity-75');
+            }
+        }
+    </script>
+</body>
+</html>
