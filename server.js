@@ -32,7 +32,9 @@ app.post('/api/generate-schedule', async (req, res) => {
     }
 });
 
+// Khai báo port linh hoạt: Ưu tiên dùng Port của Render, nếu không có thì mới dùng 3000
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-    console.log(`🚀 Backend đang chạy ngon lành tại http://localhost:${PORT}`);
+    console.log(`Backend dang chay ngon lanh tai port ${PORT}`);
 });
