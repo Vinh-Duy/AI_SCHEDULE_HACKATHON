@@ -4,6 +4,9 @@ require('dotenv').config();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
+const path = require('path');
+// Dòng này giúp server tự động mở cửa cho tất cả file HTML, CSS, JS trong thư mục
+app.use(express.static(__dirname));
 app.use(cors()); // Cho phép Frontend gọi được Backend
 app.use(express.json());
 
